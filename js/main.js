@@ -47,18 +47,25 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') show(index + 1);
 });
 
-// Formlar: sunucu tarafı olmadığı için e-posta istemcisini açar
-document.querySelectorAll('form[data-mailto]').forEach(form => {
+// Formlar FormSubmit'e gönderilir; gönderim sonrası tesekkurler.html onay sayfası açılır
+const MAX_UPLOAD = 5 * 1024 * 1024;
+document.querySelectorAll('form[action*="formsubmit.co"]').forEach(form => {
+  const next = form.querySelector('input[name="_next"]');
+  if (next) next.value = new URL('tesekkurler.html', location.href).href;
+
   form.addEventListener('submit', e => {
-    e.preventDefault();
-    const data = new FormData(form);
-    const lines = [];
-    for (const [key, value] of data.entries()) {
-      if (key !== 'kvkk' && value) lines.push(key + ': ' + value);
+    const status = form.querySelector('.form-status');
+    const files = [...form.querySelectorAll('input[type="file"]')].flatMap(input => [...input.files]);
+    const total = files.reduce((sum, f) => sum + f.size, 0);
+    if (total > MAX_UPLOAD) {
+      e.preventDefault();
+      status.textContent = 'Eklediğiniz dosyalar toplam 5 MB sınırını aşıyor. Büyük dosyaları info@ucarmetal.com adresine e-posta ile gönderebilirsiniz.';
+      status.classList.add('error');
+      return;
     }
-    const subject = encodeURIComponent(form.dataset.subject || 'Web sitesi formu');
-    const body = encodeURIComponent(lines.join('\n'));
-    window.location.href = 'mailto:' + form.dataset.mailto + '?subject=' + subject + '&body=' + body;
+    status.classList.remove('error');
+    status.textContent = 'Gönderiliyor, lütfen bekleyin…';
+    form.querySelector('button[type="submit"]').disabled = true;
   });
 });
 
